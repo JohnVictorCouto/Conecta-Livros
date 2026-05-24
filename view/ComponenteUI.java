@@ -8,7 +8,7 @@ import java.awt.event.*;
 
 public class ComponenteUI {
 
-    // ─── Botão Primário (azul cheio) ──────────────────────────────────────────
+    // Botão Primário (azul cheio)
     public static class BotaoPrimario extends JButton {
         private boolean hovered = false;
         public BotaoPrimario(String texto) {
@@ -34,7 +34,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Botão pequeno (para cards) ───────────────────────────────────────────
+    // Botão pequeno
     public static class BotaoPrimarioSm extends JButton {
         private boolean hovered = false;
         public BotaoPrimarioSm(String texto) {
@@ -59,7 +59,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Botão Perigo ─────────────────────────────────────────────────────────
+    // Botão Perigo
     public static class BotaoPerigo extends JButton {
         private boolean hovered = false;
         public BotaoPerigo(String texto) {
@@ -85,7 +85,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Botão Contorno ───────────────────────────────────────────────────────
+    // Botão Contorno
     public static class BotaoContorno extends JButton {
         protected boolean hovered = false;
         public BotaoContorno(String texto) {
@@ -128,7 +128,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Botão de Filtro (tab pills, como no screenshot) ─────────────────────
+    //Botão de Filtro
     public static class BotaoFiltro extends JButton {
         private boolean ativo = false;
         private boolean hovered = false;
@@ -169,7 +169,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Campo de Busca com ícone ─────────────────────────────────────────────
+    // Campo de Busca com ícone
     public static class CampoBusca extends JPanel {
         private final JTextField campo;
         public CampoBusca(String placeholder, int width) {
@@ -219,7 +219,7 @@ public class ComponenteUI {
         public void addKeyListener(KeyListener kl) { campo.addKeyListener(kl); }
     }
 
-    // ─── Campo de texto simples ────────────────────────────────────────────────
+    // Campo de texto simples
     public static class CampoTexto extends JTextField {
         private final String placeholder;
         private boolean focused = false;
@@ -254,7 +254,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Area de texto ────────────────────────────────────────────────────────
+    // Area de texto
     public static class AreaTexto extends JTextArea {
         public AreaTexto() {
             setFont(UITheme.fontBody());
@@ -272,7 +272,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Badge de Gênero (estilo screenshot) ──────────────────────────────────
+    // Badge de Gênero
     public static class BadgeGenero extends JLabel {
         private final Color bg, fg;
         public BadgeGenero(String genero) {
@@ -297,7 +297,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Badge de Status (Disponível / Emprestado) ────────────────────────────
+    // Badge de Status (Disponível / Emprestado)
     public static class BadgeStatus extends JLabel {
         public BadgeStatus(boolean disponivel) {
             super(disponivel ? "● Disponível" : "● Emprestado");
@@ -307,7 +307,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Card branco com sombra ────────────────────────────────────────────────
+    // Card branco com sombra
     public static class CardPanel extends JPanel {
         private final int radius;
         public CardPanel() { this(12); }
@@ -329,7 +329,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── Borda arredondada ────────────────────────────────────────────────────
+    // Borda arredondada 
     public static class RoundedBorder extends AbstractBorder {
         private final Color color; private final int radius;
         public RoundedBorder(Color color, int radius) { this.color = color; this.radius = radius; }
@@ -343,7 +343,7 @@ public class ComponenteUI {
         @Override public Insets getBorderInsets(Component c) { return new Insets(4, 8, 4, 8); }
     }
 
-    // ─── Tabela moderna ───────────────────────────────────────────────────────
+    // Tabela moderna 
     public static void estilizarTabela(JTable t) {
         t.setRowHeight(48);
         t.setFont(UITheme.fontTableCell());
@@ -376,7 +376,7 @@ public class ComponenteUI {
         }
     }
 
-    // ─── ScrollPane limpo ─────────────────────────────────────────────────────
+    // ScrollPane limpo
     public static JScrollPane scrollLimpo(Component c) {
         JScrollPane s = new JScrollPane(c);
         s.setBorder(BorderFactory.createEmptyBorder());
@@ -385,7 +385,7 @@ public class ComponenteUI {
         return s;
     }
 
-    // ─── Label de formulário ──────────────────────────────────────────────────
+    // Label de formulário
     public static JLabel labelForm(String txt) {
         JLabel l = new JLabel(txt);
         l.setFont(UITheme.fontBodyBold());
