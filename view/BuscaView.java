@@ -330,7 +330,7 @@ public class BuscaView extends JPanel {
             badgeRow.add(lblIdioma);
         }
         if (livro.getIsbn() != null && !livro.getIsbn().isBlank()) {
-            JLabel lblIsbn = new JLabel("ISBN: " + livro.getIsbn());
+            JLabel lblIsbn = new JLabel("📚 ISBN: " + livro.getIsbn());
             lblIsbn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 12));
             lblIsbn.setForeground(UITheme.TEXT_MUTED);
             badgeRow.add(lblIsbn);
