@@ -5,9 +5,10 @@ import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.RenderingHints;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -18,7 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ImagemCapa extends JPanel {
 
     private static final ConcurrentHashMap<String, BufferedImage> CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap.KeySetView<String, Boolean> FALHAS = ConcurrentHashMap.newKeySet();
     private static final int TIMEOUT_MS = 5000;
+    private static final int TENTATIVAS = 3;
 
     private final String urlCapa;
     private BufferedImage imagemOriginal;
@@ -55,6 +58,9 @@ public class ImagemCapa extends JPanel {
             imagemOriginal = CACHE.get(urlCapa);
             return;
         }
+        if (FALHAS.contains(urlCapa)) {
+            return;
+        }
 
         carregando = true;
         new SwingWorker<BufferedImage, Void>() {
@@ -64,18 +70,16 @@ public class ImagemCapa extends JPanel {
                     if (CACHE.containsKey(urlCapa)) {
                         return CACHE.get(urlCapa);
                     }
-                    URL url = URI.create(urlCapa).toURL();
-                    URLConnection connection = url.openConnection();
-                    connection.setConnectTimeout(TIMEOUT_MS);
-                    connection.setReadTimeout(TIMEOUT_MS);
-                    connection.setRequestProperty("User-Agent", "Mozilla/5.0");
-                    BufferedImage img = javax.imageio.ImageIO.read(connection.getInputStream());
+                    BufferedImage img = baixarImagem(urlCapa);
                     if (img != null) {
                         CACHE.put(urlCapa, img);
+                    } else {
+                        FALHAS.add(urlCapa);
                     }
                     return img;
                 } catch (Exception e) {
-                    System.err.println("Erro ao carregar capa: " + e.getMessage());
+                    FALHAS.add(urlCapa);
+                    System.err.println("Erro ao carregar capa: " + urlCapa + " (" + e.getMessage() + ")");
                     return null;
                 }
             }
@@ -89,6 +93,48 @@ public class ImagemCapa extends JPanel {
                 repaint();
             }
         }.execute();
+    }
+
+    private static BufferedImage baixarImagem(String endereco) throws Exception {
+        URL url = URI.create(endereco).toURL();
+        Exception ultimoErro = null;
+
+        for (int tentativa = 1; tentativa <= TENTATIVAS; tentativa++) {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setInstanceFollowRedirects(true);
+                connection.setConnectTimeout(TIMEOUT_MS);
+                connection.setReadTimeout(TIMEOUT_MS);
+                connection.setRequestProperty("User-Agent", "Conecta-Livros/1.0");
+                connection.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
+                connection.setRequestProperty("Connection", "close");
+
+                int status = connection.getResponseCode();
+                if (status >= 300 && status < 400 && connection.getHeaderField("Location") != null) {
+                    url = URI.create(connection.getHeaderField("Location")).toURL();
+                    continue;
+                }
+                if (status != HttpURLConnection.HTTP_OK) {
+                    return null;
+                }
+
+                try (InputStream in = connection.getInputStream()) {
+                    return javax.imageio.ImageIO.read(in);
+                }
+            } catch (Exception e) {
+                ultimoErro = e;
+                if (tentativa < TENTATIVAS) {
+                    Thread.sleep(300L * tentativa);
+                }
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        }
+
+        throw ultimoErro;
     }
 
     @Override
