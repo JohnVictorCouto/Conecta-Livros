@@ -46,18 +46,18 @@ public class OpenLibraryClient {
         String body = sb.toString().trim();
         if (body.equals("{}") || body.isEmpty()) return null;
 
-        // extract object for key ISBN:xxxx
+        // extrair objeto para key ISBN:xxxx
         String key = "\"ISBN:" + clean + "\"";
         int idx = body.indexOf(key);
         if (idx < 0) {
-            // try with uppercase X
+            // tentar com uppercase X
             key = "\"ISBN:" + clean.toUpperCase() + "\"";
             idx = body.indexOf(key);
             if (idx < 0) return null;
         }
         int start = body.indexOf('{', idx + key.length());
         if (start < 0) return null;
-        // find matching closing brace — naive approach: find the first closing brace followed by '}' balancing is complex; instead take from start to last '}' before next key or end
+        // Encontrar chave de fechamento correspondente — abordagem ingênua: encontrar a primeira chave de fechamento seguida por '}'; o balanceamento é complexo; em vez disso, pegue do início ao último '}' antes da próxima chave ou fim.
         int end = body.indexOf("}\n}", start); // try common pattern
         if (end < 0) end = body.indexOf("}\n}", start);
         if (end < 0) end = body.lastIndexOf('}');
@@ -71,7 +71,7 @@ public class OpenLibraryClient {
         Matcher m = TITLE_P.matcher(obj);
         if (m.find()) l.setTitle(unescape(m.group(1)));
 
-        // authors
+        // autores
         m = AUTHORS_P.matcher(obj);
         if (m.find()) {
             String authorsBlock = m.group(1);
@@ -81,7 +81,7 @@ public class OpenLibraryClient {
             if (!names.isEmpty()) l.setAuthors(String.join(", ", names));
         }
 
-        // cover
+        // capas
         m = COVER_P.matcher(obj);
         if (m.find()) {
             String coverBlock = m.group(1);
@@ -99,7 +99,7 @@ public class OpenLibraryClient {
             }
         }
 
-        // publish year
+        // ano de publicação
         m = PUBLISH_DATE_P.matcher(obj);
         if (m.find()) {
             String pd = m.group(1);
@@ -107,7 +107,7 @@ public class OpenLibraryClient {
             if (y.find()) l.setPublishYear(Integer.parseInt(y.group(1)));
         }
 
-        // language
+        // linguagem
         m = LANGUAGES_P.matcher(obj);
         if (m.find()) {
             String langBlock = m.group(1);
