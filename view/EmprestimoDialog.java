@@ -94,7 +94,7 @@ final class EmprestimoDialog extends JDialog {
         comboLivro.addActionListener(e -> carregarExemplares());
 
         JPanel botoes = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton cancelar = new JButton(Tradutor.t("action.cancel"));
+        JButton cancelar = new ComponenteUI.BotaoContorno(Tradutor.t("action.cancel"));
         JButton registrar = new ComponenteUI.BotaoPrimario(Tradutor.t("loans.register"));
         cancelar.addActionListener(e -> dispose());
         registrar.addActionListener(e -> registrar());
