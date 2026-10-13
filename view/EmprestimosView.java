@@ -54,8 +54,11 @@ public class EmprestimosView extends JPanel {
         filtro.addItem(Tradutor.t("loans.filter_overdue"));
         filtro.addItem(Tradutor.t("loans.filter_returned"));
         filtro.addActionListener(e -> exibirEmprestimos());
+        filtro.setFont(UITheme.fontBody());
+        Dimension tamanhoFiltro = filtro.getPreferredSize();
+        filtro.setPreferredSize(new Dimension(tamanhoFiltro.width, 36));
 
-        JButton atualizar = new JButton(Tradutor.t("action.refresh"));
+        JButton atualizar = new ComponenteUI.BotaoContorno(Tradutor.t("action.refresh"));
         atualizar.addActionListener(e -> recarregar());
         JButton novo = new ComponenteUI.BotaoPrimario(Tradutor.t("loans.new_loan"));
         novo.addActionListener(e -> EmprestimoDialog.abrir(
