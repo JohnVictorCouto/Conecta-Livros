@@ -166,6 +166,23 @@ A busca via Open Library funciona sem chave.
 
 ## Compilar e executar
 
+### Maven
+
+O Maven e as extensões Java da IDE usam o driver MySQL diretamente de
+`lib/mysql-connector-j-8.4.0.jar`. Para compilar e empacotar:
+
+```powershell
+mvn package
+```
+
+O pacote de dependências resultante fica em `target/dependency`, incluindo o
+conector MySQL. Para iniciar a aplicação no Windows pelo PowerShell:
+
+```powershell
+$classpath = "target\classes;target\dependency\*"
+java -cp $classpath view.MainFrame
+```
+
 ### Linux/macOS
 
 ```bash
