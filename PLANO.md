@@ -1,111 +1,98 @@
 # MELHORIAS — CONECTA-LIVROS
 
 ## Objetivo
-Ampliar o sistema desktop de biblioteca utilizando arquitetura Cliente-Servidor com Java Sockets e Threads, controle de acesso baseado em perfis (RBAC), gestão de acervo e empréstimos, listas escolares e pessoais, notificações assíncronas, integrações de livros e funcionamento resiliente quando serviços externos estiverem indisponíveis.
+Ampliar o sistema desktop de biblioteca utilizando arquitetura Cliente-Servidor com Java Sockets e Threads, uma única conta e instância de Cliente com perfil ADMIN, gestão de acervo e empréstimos para leitores cadastrados, listas escolares administradas, notificações assíncronas, integrações de livros e funcionamento resiliente quando serviços externos estiverem indisponíveis.
 
-A entrega principal terá dois artefatos executáveis: **`Cliente.jar`** e **`Servidor.jar`**. Um mesmo Cliente.jar atende ADMIN e USER; o servidor autentica a conta e autoriza cada operação. O servidor e o MySQL rodam localmente ou na rede local. “Offline” significa continuar as tarefas que não dependem de serviços externos quando o servidor e o banco estiverem disponíveis; gravação offline de empréstimos e sincronização posterior não está incluída sem uma fila persistente e regras próprias de conflito.
+A entrega principal terá dois artefatos executáveis: **`Cliente.jar`** e **`Servidor.jar`**. Há uma única conta ADMIN, usada pela única instância Cliente.jar autorizada a operar com o Servidor. Leitores/tomadores são registros administrados pelo ADMIN e não possuem contas nem acesso ao Cliente. O Servidor autentica o ADMIN e autoriza cada operação. O Servidor e o MySQL rodam localmente ou na rede local. “Offline” significa continuar as tarefas que não dependem de serviços externos quando o Servidor e o banco estiverem disponíveis; gravação offline de empréstimos e sincronização posterior não está incluída sem uma fila persistente e regras próprias de conflito.
 
 
-## 1. Perfis e permissões
+## 1. Conta e permissões
 
-### ROLE_ADMIN — Administrador / Bibliotecário
+### ADMIN — Administrador / Bibliotecário (única conta do sistema)
 
 - Obras e exemplares: Cadastrar uma obra pelo ISBN. Se houver conexão com a 
   internet, o Servidor consulta Google Books e/ou Open Library para retornar metadados
   (título, autores, editora, sinopse e capa) e registrar os exemplares físicos 
   (BookCopy).
-- Gestão administrativa: Realizar operações de CRUD de usuários, obras, 
-  exemplares, bibliotecas, categorias e listas escolares.
+- Gestão administrativa: Realizar operações de CRUD de leitores/tomadores
+  (registros sem credenciais de acesso), obras, exemplares, bibliotecas,
+  categorias e listas escolares.
 - Exclusão Segura: Aplicar soft delete (inativação por flag lógica no MySQL) para 
   registros que possuam histórico transacional atrelado, sinalizando visualmente 
   na tabela do Cliente (JTable). Exclusão física fica restrita a manutenção excepcional
   e não pode apagar histórico pela operação administrativa normal.
-- Empréstimos: Aprovar solicitações pendentes recebidas via Socket, validar
-  disponibilidade e regras e converter solicitações em empréstimos. A retirada
-  física é parte do fluxo atual; empréstimo de e-book somente será implementado
-  após definir licença, arquivo/conteúdo e regras específicas. Exportar histórico
-  filtrado para CSV.
+- Empréstimos: Registrar diretamente no balcão empréstimos, reservas e
+  devoluções para leitores cadastrados, validar disponibilidade e regras e
+  manter eventual fila de espera no Servidor. Não há solicitação nem aprovação
+  feita por contas de leitores. A retirada física é parte do fluxo atual;
+  empréstimo de e-book somente será implementado após definir licença,
+  arquivo/conteúdo e regras específicas. Exportar histórico filtrado para CSV.
 - Listas escolares: Criar e publicar coleções de leitura obrigatória associadas 
   a uma turma e período letivo; editar rascunhos, publicar e notificar a turma.
-- Inadimplência: Consultar atrasos, disparar e-mails de cobrança manualmente ou 
-  por rotina automatizada assíncrona, aplicar bloqueios conforme política aprovada
-  e manter consulta de dados permitida pela política.
-- Contas: Criar, editar, suspender, reativar e inativar usuários. ADMIN não pode
-  consultar senha, definir uma senha conhecida pelo usuário, elevar a própria
-  permissão nem inativar/rebaixar o último ADMIN ativo. Provisionar o primeiro
-  ADMIN sem credencial padrão no código.
+- Inadimplência: Consultar atrasos de leitores, disparar e-mails de cobrança
+  manualmente ou por rotina automatizada assíncrona e aplicar bloqueios conforme
+  política aprovada.
+- Conta de acesso: Provisionar exatamente uma conta ADMIN fora do cadastro
+  público, sem credencial padrão no código. O Cliente não cria outras contas,
+  papéis ou sessões concorrentes. O ADMIN pode trocar sua própria senha por um
+  fluxo seguro, mas nunca consultar a senha armazenada.
 - Auditoria: Registrar ator, ação, recurso, data/hora, resultado e motivo quando
   aplicável em alterações sensíveis, sem armazenar senha, token ou dados excessivos.
 
-### ROLE_USER — Leitor / Aluno
+### Leitores/tomadores (sem conta de acesso)
 
-- Perfil: Atualizar os próprios dados permitidos (nome de exibição, e-mail,
-  telefone e preferências) e selecionar gêneros
-  e autores preferidos para apoiar recomendações locais. A troca de e-mail exige
-  nova verificação; senha é alterada em fluxo próprio.
-- Listas pessoais: Criar e gerenciar listas privadas de interesse por meio da 
-  interface gráfica (JComboBox e JTable), como “Quero Ler” e “Favoritos da Vida”.
-- Empréstimos: Solicitar reserva de exemplar e entrar em fila persistida no MySQL
-  quando não houver disponibilidade. A fila não pode existir somente em memória,
-  pois vários clientes compartilham o servidor e a ordem deve sobreviver a reinícios.
-- Consultas: Visualizar o catálogo, as bibliotecas disponíveis e o próprio 
-  histórico, perfil, solicitações e progresso escolar.
-- Atualizações permitidas: Alterar estritamente os próprios dados de perfil, 
-  preferências e listas; cancelar apenas solicitações próprias ainda pendentes.
-  USER não aprova empréstimos, registra devoluções, muda papéis/status, altera
-  exemplares, consulta dados de terceiros ou apaga histórico.
-- Progresso escolar: Visualizar componente visual (JProgressBar) indicando o 
-  percentual ou checklist dos livros da lista obrigatória da sua turma já lidos/devolvidos 
-  no período letivo atual.
-- Estado da conta: PENDENTE_VERIFICACAO não acessa operações normais; ATIVA opera
-  conforme o papel; SUSPENSA mantém apenas os acessos de leitura autorizados e não
-  cria novos compromissos; INATIVA não inicia sessão. Papel e estado são regras
-  independentes.
+- O ADMIN mantém os dados necessários para identificar leitores e associá-los a
+  empréstimos, devoluções, reservas e notificações.
+- Leitores não fazem login, não acessam o Cliente, não mantêm perfil/listas
+  pessoais e não enviam solicitações pelo sistema. O ADMIN realiza essas ações
+  em nome do leitor quando aplicável.
+- Dados de leitores são acessados e exportados apenas para tarefas administrativas
+  necessárias, com auditoria das consultas sensíveis.
 
-### Regras de autorização comuns
+### Regras de autenticação e autorização
 - A interface pode ocultar botões, mas somente o Servidor autoriza e executa
-  operações protegidas. Cada requisição verifica identidade autenticada, papel,
-  estado da conta, propriedade do registro e estado atual do recurso.
+  operações protegidas. Cada requisição verifica a sessão da única conta ADMIN,
+  o estado da conta e o estado atual do recurso.
 - O Servidor obtém o ID do ator da sessão autenticada; não confia em `userId`,
-  `role` ou proprietário enviados pelo Cliente.
-- USER vê somente o próprio histórico, listas privadas, preferências, solicitações
-  e progresso. ADMIN acessa dados pessoais apenas quando necessário à operação,
-  com auditoria das consultas sensíveis/exportações.
-- Se ADMIN também puder emprestar como leitor, registrar separadamente o leitor
-  beneficiado e o operador do balcão.
+  `role` ou identidade do leitor enviados pelo Cliente. O leitor beneficiado é
+  um registro de negócio distinto do ADMIN que opera o balcão.
+- Não há papéis USER, cadastro público, autorização por propriedade de conta ou
+  acesso de leitores ao catálogo/histórico pelo Cliente.
 
 
 ## 2. Autenticação e autorização (Arquitetura Cliente-Servidor com Sockets)
-- Executar `Cliente.jar` em vários computadores/clientes e `Servidor.jar` em uma
-  máquina local ou da rede local. Apenas o Servidor acessa o MySQL.
-- Proteger todas as operações por autorização no backend. O RBAC controla
-  permissões, mas a verificação também considera propriedade do registro, estado
-  da conta e estado da operação.
-- O Cliente envia mensagens de protocolo versionadas e validadas por Socket;
-  definir tipo, tamanho máximo, campos, timeout, identificador de requisição e
-  códigos de resposta. Não desserializar objetos Java arbitrários recebidos da rede.
-- **Uso obrigatório de AES:** por exigência acadêmica, o Servidor deve armazenar
-  também uma cópia cifrada da senha no banco, usando AES-GCM. A chave fica fora
-  do código, banco, Git e dos dois JARs, em configuração local protegida; usar
-  nonce aleatório e único por cifragem, tag de autenticação e versão do formato.
-  Somente o Servidor pode decifrar; a senha/ciphertext nunca é exibida ao ADMIN
-  ou enviada de volta ao Cliente. Não implementar algoritmo ou modo próprio.
-- **Autenticação e ressalva de segurança:** manter também hash salgado PBKDF2
-  para verificar o login, sem decifrar a senha durante autenticação. AES é
-  reversível; manter ciphertext de senha é uma exceção acadêmica, não uma prática
-  recomendada para produção. **Tráfego:** proteger credenciais com TLS/SSLSocket
-  quando configurado; nunca registrar senha, hash ou ciphertext em logs.
-- O Servidor aceita conexões concorrentes com limites de recursos e tratamento
-  de desconexão. Evitar uma thread ilimitada por conexão; utilizar Threads ou
-  executor limitado, mantendo compatibilidade com a ementa.
+- Executar uma única instância de `Cliente.jar`, autenticada pela única conta
+  ADMIN, e `Servidor.jar` em máquina local ou da rede local. Apenas o Servidor
+  acessa o MySQL.
+- Proteger todas as operações no backend; o Servidor só aceita ações da sessão
+  ADMIN ativa e considera o estado da conta e da operação.
+- O Cliente e o Servidor comunicam-se por TCP/IP usando `Socket` e
+  `ServerSocket`, com o endereço IP e a porta do Servidor definidos na
+  configuração do Cliente. Combinar entre os dois lados um formato simples de
+  mensagem; não é necessário criar protocolo binário versionado nem uma pasta
+  `network`. Não desserializar objetos Java arbitrários recebidos da rede.
+- **Armazenamento de senha com AES:** o Servidor armazena a senha cifrada com
+  AES-256-GCM, sem gravar hash ou derivação de senha em paralelo. AES é cifragem,
+  não hash: usa nonce único, tag de autenticação e formato versionado.
+  A chave fica fora do código, banco, Git e dos dois JARs, em configuração local
+  protegida. Somente o Servidor decifra durante a autenticação; senha e
+  ciphertext nunca são exibidos ao ADMIN nem enviados de volta ao Cliente.
+  Cifragem reversível de senha é uma escolha específica deste projeto, não uma
+  recomendação geral de segurança.
+- **Tráfego:** o Socket simples não implementa TLS. Não transmitir credenciais
+  por rede não confiável sem proteção adequada; nunca registrar senha, chave,
+  nonce, tag ou ciphertext em logs.
+- O Servidor mantém uma única sessão Cliente ativa. Usar Threads ou executor
+  limitado para tarefas internas, notificações e integrações, com limites de
+  recursos e tratamento de desconexão; uma nova sessão ADMIN só pode iniciar
+  após o encerramento/revogação da anterior.
 - O Servidor valida credenciais e estado da conta via serviço de autenticação,
   mantém a sessão no backend e autoriza cada pedido com o ator da sessão.
-- Requisições de USER, como alteração de e-mail ou exclusão de lista própria,
-  devem confirmar propriedade no Servidor. Qualquer tentativa de acesso a dados
-  alheios ou função administrativa é negada e testada.
-- Contas não verificadas recebem resposta genérica adequada e ficam bloqueadas
-  de operações protegidas. Login não revela se um e-mail está cadastrado; aplicar
-  limites de tentativas, expiração e revogação de sessão.
+- O Cliente não pode escolher ou forjar identidade/papel do ator; toda operação
+  é associada à sessão ADMIN autenticada. O ADMIN só altera dados de leitores e
+  outros registros de acordo com as regras e auditoria do Servidor.
+- Aplicar limites de tentativas, expiração e revogação da sessão ADMIN. Não há
+  cadastro de conta nem fluxo de verificação de conta de leitor.
 - Credenciais MySQL, SMTP e chaves de API ficam apenas na configuração protegida
   do Servidor, fora do código, JARs, Git e logs.
 
@@ -119,25 +106,22 @@ do Servidor, sem bloquear a EDT, a thread que aceita sockets ou a transação qu
 confirmou a operação principal. A falha de e-mail não desfaz um empréstimo,
 devolução ou publicação já confirmados.
 
-- Confirmação de cadastro: Gerar código de uso único com seis dígitos, prazo
-  inicial de 15 minutos, limite de tentativas e reenvio controlado. Persistir
-  apenas informação de verificação necessária, proteger o código conforme a
-  política de autenticação e invalidá-lo após uso/expiração. O Cliente apresenta
-  formulário de verificação antes de liberar a sessão normal.
-- Aprovação de empréstimo: Informar os detalhes do livro, o prazo estipulado de 
-  devolução (calculado com manipulação de datas do Java) e as normas de devolução 
-  da biblioteca.
+- Empréstimo/devolução: Após o ADMIN registrar a operação para um leitor,
+  informar por e-mail os detalhes do livro, o prazo de devolução e as normas
+  aplicáveis, conforme os dados de contato disponíveis.
 - Aviso de vencimento: Rotina diária do Servidor localiza empréstimos que vencem
   em dois dias, envia lembrete e registra o evento para impedir duplicidade.
 - Atraso: Enviar cobrança conforme periodicidade e política de bloqueio aprovada;
   evitar envio diário ilimitado. Registrar tentativa/resultado e respeitar
   preferências e regras de contato definidas para o projeto.
-- Nova lista escolar: Após publicação confirmada, notificar alunos da turma/período
-  correspondente. Registrar status por destinatário e permitir retentativa segura.
+- Nova lista escolar: Após publicação confirmada pelo ADMIN, notificar os
+  destinatários cadastrados para a turma/período correspondente. Registrar status
+  por destinatário e permitir retentativa segura.
 - Idempotência e recuperação: A fila de notificações deve sobreviver à reinicialização
   do Servidor ou tratar claramente eventos pendentes; reprocessar não duplica e-mail.
-- Testes: Usar SMTP de teste/local, como MailHog, sem enviar mensagens reais nos
-  testes automatizados. Segredos SMTP ficam fora do código e dos JARs.
+- Não enviar mensagens de verificação de conta. Testes usam SMTP de teste/local,
+  como MailHog, sem enviar mensagens reais. Segredos SMTP ficam fora do código e
+  dos JARs.
 
 
 ## 4. Funcionamento online e offline (Configuração por Arquivo Texto)
@@ -194,42 +178,45 @@ descartável/local isolado e servidor SMTP falso. O conjunto automatizado deve
 rodar sem internet e nunca apontar para dados reais.
 
 - Testes unitários: Validar domínio de livro/empréstimo, disponibilidade, fila,
-  prazo, cálculo de progresso (lista vazia/parcial/completa), expiração e uso único
-  do código de verificação, validações e máquina de estados.
-- Testes de autorização: Cobrir cada ação da matriz ADMIN/USER e estados de conta.
-  Adulterar `userId`, `role` e identificadores no pedido; provar que USER não
-  acessa dados alheios nem executa ações administrativas e que ADMIN não contorna
-  o estado da conta ou proteção do último administrador.
-- Testes de concorrência: Vários clientes simultâneos; duas requisições pelo
-  último exemplar; isolamento de sessão; fila e notificações após reiniciar o
-  servidor; pedidos duplicados e respostas fora de ordem.
+  prazo, validações e máquina de estados; não incluir fluxos de contas de leitores,
+  listas pessoais ou progresso por conta.
+- Testes de autorização: Cobrir as ações permitidas à única conta ADMIN e estados
+  da conta. Adulterar `userId`, `role` e identificadores no pedido; confirmar que
+  a sessão é a única fonte da identidade do ator, que contas/roles adicionais não
+  podem ser criados e que uma conta ADMIN inativa não opera.
+- Testes de concorrência: Confirmar que apenas uma sessão Cliente é aceita;
+  desconexão/expiração libera uma nova sessão; testar requisições duplicadas,
+  disputa pelo último exemplar e recuperação da fila/notificações após reinício.
 - Testes de integração: DAOs, migrações, transações e rollback em banco de teste.
   Nunca executar testes contra o banco real de usuários.
-- Testes de AES-GCM para o campo de senha exigido academicamente: round-trip
-  exclusivamente dentro do Servidor; nonce único; rejeição de ciphertext/tag
-  adulterado; erro controlado para chave ausente/inválida; login validado pelo
-  hash PBKDF2, não pelo ciphertext; chave ausente dos JARs, banco e logs.
+- Testes de AES-GCM para o campo de senha: round-trip exclusivamente dentro do
+  Servidor; nonce único; rejeição de ciphertext/tag adulterado; erro controlado
+  para chave ausente/inválida; confirmação de que o login usa a senha cifrada
+  somente no Servidor e que não há hash/derivação de senha paralelo; chave ausente dos JARs,
+  banco e logs.
 - Simulação de serviços externos: Dublês para Google Books, Open Library e SMTP
   cobrindo sucesso, resultado vazio, ISBN inválido, falha, timeout, repetição e
   modo sem Internet.
 - Testes de interface: Verificar atualizações na EDT, acessibilidade por teclado,
   foco, mensagens, idiomas, estados vazios, loading, cancelamento e confirmação.
 - Testes de entrega: Gerar os dois JARs em ambiente limpo, confirmar entrada
-  executável, ausência de credenciais no pacote e conexão de mais de um cliente.
+  executável, ausência de credenciais no pacote e conexão da única instância
+  Cliente ADMIN.
 
 
 ## 6. Tecnologias Utilizadas (Escopo Estrito da Ementa da Mauá)
 - Java SE (JDK): Linguagem base dos dois aplicativos (Cliente e Servidor).
 - Java Swing: Biblioteca para construção manual, componente a componente, das interfaces 
   do Cliente (sem uso de editores WYSIWYG).
-- Java Sockets (java.net.Socket / java.net.ServerSocket): Tecnologia exclusiva de 
-  comunicação de rede Cliente-Servidor.
-- Java Threads/Executors: Comunicação concorrente limitada; garantir compatibilidade
-  com a ementa e com o requisito de múltiplos clientes.
+- Java Sockets (java.net.Socket / java.net.ServerSocket): comunicação
+  bidirecional Cliente-Servidor por TCP/IP, configurando IP/host e porta do
+  Servidor no Cliente e usando mensagens simples acordadas entre ambos.
+- Java Threads/Executors: Executar tarefas internas do Servidor com limites e sem
+  bloquear o Cliente; não há requisito de atendimento a múltiplos clientes.
 - MySQL/JDBC: Acesso exclusivo do Servidor; nunca conectar diretamente pelo Cliente.
 
-**Implantação:** sem AWS; execução local ou em rede local. O Servidor e o banco
-centralizam os dados para todos os clientes.
+**Implantação:** sem AWS; execução local ou em rede local. Um único Cliente ADMIN
+acessa o Servidor e o banco centraliza os dados da biblioteca.
 
 ### Tecnologias previstas e dependências
 - Google Books API — consulta de metadados por ISBN.
@@ -238,25 +225,24 @@ centralizam os dados para todos os clientes.
 - JUnit 5 — testes automatizados.
 - Jakarta Mail/JavaMail — dependência externa necessária às notificações
   obrigatórias; incluir no pacote do Servidor conforme o build aprovado.
-- Senhas: manter hash salgado com derivação apropriada (por exemplo PBKDF2 do
-  JDK) para autenticação. Por exigência acadêmica específica, guardar também
-  ciphertext AES-GCM da senha no banco, com decifragem restrita ao Servidor;
-  documentar que esse armazenamento reversível é exceção acadêmica e não
-  recomendação de produção.
-- AES-GCM: implementar no Servidor, nunca no Cliente; a chave fica em
-  configuração protegida externa aos JARs e ao banco, com versionamento e plano
-  de rotação. Não registrar senha, hash, ciphertext ou chave.
-- TLS/SSLSocket para proteger credenciais em trânsito, se permitido e viável
-  segundo a ementa; não implementar criptografia própria.
+- Senhas: armazenar somente a senha cifrada com AES-256-GCM no Servidor; não
+  armazenar hash nem outra derivação em paralelo. AES é cifragem,
+  não hash; documentar a decisão de usar cifragem reversível para autenticação.
+- AES-GCM: implementar no Servidor, nunca no Cliente; usar nonce único, tag e
+  formato versionado. A chave fica em configuração protegida externa aos JARs e
+  ao banco, com plano de rotação. Não registrar senha, ciphertext ou chave.
+- O Socket simples não implementa TLS; não enviar credenciais por rede não
+  confiável sem proteção adequada. Não implementar criptografia própria.
 - Dependências de execução ficam no JAR correspondente ou no pacote documentado:
   o Cliente não leva driver MySQL; o Servidor leva driver JDBC e bibliotecas
   de servidor aprovadas. O build deve gerar somente `Cliente.jar` e `Servidor.jar`
   como artefatos executáveis exigidos.
 
 ## 7. Requisitos gerais
-- Servir vários clientes simultaneamente no mesmo servidor e compartilhar estado
-  persistente no MySQL, com isolamento entre sessões.
-- Funcionar em diferentes máquinas e redes locais por configuração de host/porta.
+- Servir uma única instância Cliente ADMIN e compartilhar estado persistente no
+  MySQL; rejeitar sessões ADMIN concorrentes.
+- Funcionar localmente ou em rede local por configuração de host/porta, com uma
+  única estação Cliente autorizada.
 - Manter os fluxos locais disponíveis quando APIs externas/e-mail falharem e o
   Servidor e MySQL estiverem ativos; não simular gravação offline com o banco fora.
 - Preservar e adaptar a estrutura atual: reaproveitar as telas, CRUDs, DAOs e
@@ -269,7 +255,8 @@ centralizam os dados para todos os clientes.
 ## 8. Aplicações IHC
 
 As 13 melhorias abaixo são obrigatórias. As recomendações devem ser adaptadas aos
-fluxos reais de biblioteca, aos papéis USER/ADMIN e ao uso por vários clientes.
+fluxos reais de biblioteca operados por uma única conta ADMIN em uma única
+instância Cliente.
 Onde o projeto já possui parte do recurso (por exemplo, placeholders, SwingWorker,
 renderer zebrado, ISBN ou traduções), reutilizar e completar a cobertura em vez de
 reimplementar a base.
@@ -301,7 +288,7 @@ em vez de deixar a tela aparentemente travada.
   secundárias. Falha na consulta nunca aparece como zero.
 - **Consistência visual:** agrupar controles relacionados, usar rótulos objetivos,
   hierarquia tipográfica e espaçamento consistentes e evitar telas sobrecarregadas.
-- **Aceite:** participante consegue localizar a tarefa principal sem navegar por
+- **Aceite:** o ADMIN consegue localizar a tarefa principal sem navegar por
   indicadores irrelevantes; consultas demoradas não bloqueiam a interface.
 
 ### 3. Consistência e compatibilidade com o mundo real
@@ -335,7 +322,7 @@ desktop.
 - **Aceite:** fluxos essenciais de busca, empréstimo e devolução podem ser concluídos
   com teclado e mouse; foco é sempre identificável.
 
-### 5. Flexibilidade e eficiência para usuários experientes
+### 5. Flexibilidade e eficiência para o operador ADMIN
 
 Manter o aprendizado simples para iniciantes e reduzir passos para operadores
 frequentes, sem comprometer confirmações ou validações.
@@ -365,15 +352,15 @@ autoexplicabilidade e tolerância a erros.
 
 ### 7. Reconhecimento em vez de memorização e cache
 
-Reduzir a necessidade de lembrar dados entre telas sem misturar informações de
-usuários diferentes.
+Reduzir a necessidade de lembrar dados entre telas, mantendo informações de
+leitores corretamente associadas aos respectivos registros.
 
 - **Capas no histórico:** mostrar miniatura da obra ao lado do título; disponibilizar
   alternativa textual e fallback local quando a imagem não carregar.
 - **Cache:** reutilizar `DadosCache` para dados de catálogo não sensíveis, com
   validade/invalidação após mudanças; não cachear permissões nem decisões do Servidor.
-- **Isolamento:** qualquer dado privado em cache é associado à sessão, limpo ao
-  encerrar/trocar conta e nunca compartilhado entre clientes.
+- **Isolamento:** cache e dados de sessão são associados à única conta ADMIN e
+  limpos ao encerrar a sessão. Não há cache ou dados privados de contas de leitores.
 - **Aceite:** atualização aparece sem reiniciar o Cliente; cache expirado não
   mostra disponibilidade ou autorização obsoleta como se fosse verdade atual.
 
@@ -399,8 +386,8 @@ externa pode estar pendente porque uma API não respondeu.
 
 - **Estados de capa:** `PENDENTE`, `EM_PROCESSAMENTO`, `SINCRONIZADA` e `FALHA`,
   com imagem padrão e rótulo acessível.
-- **Atualização:** o Servidor processa capas em segundo plano e notifica/retorna
-  atualização aos clientes; preservar metadados e capa válidos em falha futura.
+- **Atualização:** o Servidor processa capas em segundo plano e retorna a
+  atualização ao Cliente ADMIN; preservar metadados e capa válidos em falha futura.
 - **Sem rede externa:** cadastro manual persiste normalmente no MySQL se Servidor
   e banco estão disponíveis; gravação offline no Cliente não faz parte do escopo
   sem fila local e resolução de conflitos.
@@ -442,31 +429,29 @@ Separar notas de versão, diagnóstico técnico e auditoria de ações:
 
 ### 13. Senha mascarada e indicador de força
 
-Proteger senha com método apropriado, sem confundir mascaramento visual, cifragem
-em trânsito e armazenamento no banco.
+Proteger senha com AES-256-GCM no banco, sem confundir mascaramento visual,
+cifragem em trânsito e armazenamento persistente.
 
-- **Interface:** usar `JPasswordField` em login/cadastro; mascarar por padrão.
-  Indicador de força pode ser educativo e calculado localmente enquanto digita,
-  sem registrar, enviar ou imprimir a senha.
-- **Servidor:** no cadastro, gerar e armazenar hash salgado com derivação de senha
-  (por exemplo, PBKDF2 do JDK); autenticar comparando o hash. Como exigência
-  acadêmica adicional, armazenar também o ciphertext AES-GCM da senha no banco.
-  O ciphertext é reversível e não deve ser tratado como controle de segurança
-  para produção; o fluxo de login não deve decifrá-lo.
-- **Uso de AES exigido pelo projeto:** `CryptoAES`/AES-GCM fica exclusivamente
-  no Servidor e cifra a senha antes de armazenar a cópia exigida. A chave fica
-  fora do Cliente, banco, Git e JARs. Usar nonce único e tag de autenticação;
-  não exibir nem devolver senha/ciphertext ao ADMIN ou Cliente.
-- **Proteção adicional:** a senha em trânsito deve usar canal protegido
-  (TLS/SSLSocket quando configurado); AES na coluna do banco não protege o
-  tráfego de rede.
-- **Transporte:** não implementar cifra própria. Proteger canal com TLS/SSLSocket
-  quando permitido pela disciplina e configurado corretamente.
+- **Interface:** usar `JPasswordField` no login e na troca de senha ADMIN;
+  mascarar por padrão. Indicador de força pode ser educativo e calculado
+  localmente enquanto digita, sem registrar, enviar ou imprimir a senha.
+- **Servidor:** ao provisionar ou trocar a senha ADMIN, cifrar e armazenar a
+  senha usando AES-256-GCM.
+  Durante o login, somente o Servidor decifra a senha armazenada para validá-la.
+  Não armazenar hash nem qualquer outra derivação em paralelo.
+- **Uso de AES:** `CryptoAES`/AES-256-GCM fica exclusivamente no Servidor. A
+  chave fica fora do Cliente, banco, Git e JARs. Usar nonce único, tag de
+  autenticação e formato versionado; não exibir nem devolver senha/ciphertext ao
+  ADMIN ou Cliente. AES é cifragem reversível, não hash.
+- **Proteção adicional:** AES na coluna do banco não protege a senha em trânsito.
+  O Socket simples não implementa TLS; não transmitir credenciais em rede não
+  confiável sem proteção adequada.
 - **Sessões:** troca/reset de senha segue fluxo próprio e invalida ou atualiza
   sessões conforme a política aprovada.
 - **Aceite:** senha nunca aparece em texto puro em banco, logs, erros ou arquivos;
-  login usa PBKDF2; a cópia AES-GCM só é decifrável dentro do Servidor com chave
-  externa, e a justificativa/risco da exigência acadêmica fica documentada.
+  o banco guarda somente ciphertext AES-GCM e metadados; somente o Servidor,
+  usando a chave externa, pode decifrá-lo para autenticar. Não existe hash ou
+  derivação paralelo, e a escolha de cifragem reversível fica documentada.
 
 ## 9. Arquitetura e entrega dos dois JARs
 
@@ -474,57 +459,57 @@ em trânsito e armazenamento no banco.
 
 | Componente | Responsabilidades | Não deve conter |
 |---|---|---|
-| `Cliente.jar` | Interface Swing; telas USER/ADMIN; validações visuais; protocolo cliente; chamadas Socket fora da EDT; mensagens, idiomas e preferências locais | DAOs JDBC, driver MySQL, senha do banco, segredo SMTP ou autoridade final sobre papel/permissão |
-| `Servidor.jar` | Socket de escuta; sessões; autenticação; RBAC; regras de negócio; validação de propriedade; transações; DAOs/JDBC; MySQL; hash PBKDF2; AES-GCM e gerenciamento da chave; auditoria; tarefas de e-mail e integração com APIs | Senhas em texto puro, chave AES/credenciais embutidas no código ou operação confiada apenas à UI |
+| `Cliente.jar` | Interface Swing exclusiva do ADMIN; validações visuais; mensagens simples por Socket com IP/host e porta configuráveis; chamadas Socket fora da EDT; idiomas e preferências locais | DAOs JDBC, driver MySQL, senha do banco, segredo SMTP ou autoridade final sobre autenticação/autorização |
+| `Servidor.jar` | Socket de escuta em IP/porta configurados; uma sessão ADMIN; autenticação; autorização ADMIN; regras de negócio; transações; DAOs/JDBC; MySQL; AES-GCM e gerenciamento da chave; auditoria; tarefas de e-mail e integração com APIs | Senhas em texto puro, chave AES/credenciais embutidas no código ou operação confiada apenas à UI |
 
-O usuário ADMIN e o USER usam o mesmo `Cliente.jar`; o Servidor informa os
-recursos disponíveis depois do login. A interface pode ocultar ações, mas o
-Servidor ainda valida cada requisição. Não criar dois clientes privilegiados
-separados: o requisito de entrega é um JAR de Cliente e um JAR de Servidor.
+Somente o ADMIN usa o `Cliente.jar`; leitores não têm login nem acesso ao
+aplicativo. O Servidor autentica a única conta e valida cada requisição. O
+requisito de entrega é um JAR de Cliente e um JAR de Servidor, com apenas uma
+instância Cliente ADMIN ativa por vez.
 
 #### Responsabilidades exclusivas do Servidor
 
-- **Rede:** abrir `ServerSocket`, aceitar clientes concorrentes, validar mensagens,
-  aplicar limites/timeouts, manter sessões e encerrar conexões.
-- **Identidade e segurança:** autenticar; determinar ator e papel; autorizar cada
-  pedido; verificar estado da conta e propriedade; proteger o último ADMIN;
-  invalidar sessão quando necessário.
+- **Rede:** abrir `ServerSocket` no IP e porta configurados, aceitar uma única
+  sessão Cliente ADMIN ativa, trocar mensagens simples e encerrar conexões.
+- **Identidade e segurança:** autenticar a conta ADMIN única; autorizar cada
+  pedido; verificar estado da conta; impedir sessão concorrente e invalidar a
+  sessão quando necessário.
 - **Negócio:** ser a autoridade para catálogo, exemplares, empréstimos,
-  disponibilidade, reservas, fila, atrasos, listas escolares, progresso,
-  recomendações, exportações e auditoria.
+  disponibilidade, reservas, fila, atrasos, listas escolares administradas,
+  exportações e auditoria.
 - **Persistência:** manter DAOs/JDBC, driver, migrações, transações, conexão e
   credenciais do MySQL. Nenhum Cliente usa JDBC para ler ou gravar dados.
-- **Senha e AES:** conter `CryptoAES`/AES-GCM para gravar/decifrar somente a
-  cópia cifrada exigida pela disciplina, com chave de fonte protegida externa
-  aos JARs; nunca devolver a chave, senha ou ciphertext em respostas ao Cliente.
-  A senha só é enviada pelo Cliente no fluxo de login por canal protegido. Usar
-  hash PBKDF2 para autenticação; documentar que ciphertext reversível de senha
-  não é recomendado para produção.
+- **Senha e AES:** conter `CryptoAES`/AES-256-GCM para cifrar e decifrar a senha
+  somente no Servidor, com chave protegida externa aos JARs; não armazenar hash
+  hash nem outra derivação. Nunca devolver a chave, senha ou ciphertext em
+  respostas ao Cliente. O Socket simples não protege senha em trânsito; não
+  utilizar em rede não confiável sem proteção adequada.
 - **Integrações e rotinas:** chamar Google Books/Open Library, obter/sincronizar
   capas, conectar ao SMTP, enviar e-mails e executar agendamentos/retentativas.
 - **Operação:** ler configuração segura, escrever logs técnicos sem segredos,
   executar health check, gerenciar encerramento e registrar auditoria.
 
-#### Responsabilidades do Cliente
+#### Responsabilidades do Cliente ADMIN
 
-- Apresentar a interface Swing para ADMIN/USER, conforme permissões recebidas.
+- Apresentar a interface Swing exclusiva do ADMIN autenticado.
 - Coletar dados, fazer validações visuais não autoritativas e comunicar-se com
-  o Servidor pelo protocolo Socket.
+  o Servidor por Socket, usando IP/host e porta configuráveis.
 - Apresentar loading, sucesso, erro, vazio, status de rede/capa e confirmação.
 - Manter idioma e preferências locais não sensíveis; não manter dados oficiais,
   senhas do banco, chave AES, DAOs JDBC nem lógica de autorização confiável.
 
-### 9.2 Comportamento com vários clientes
+### 9.2 Comportamento com cliente único
 
-- Vários clientes compartilham o mesmo Servidor e banco; cada conexão/sessão
-  permanece isolada.
-- O Servidor define limite de conexões/threads, timeout, encerramento e resposta
-  à sobrecarga. A quantidade-alvo deve ser medida e testada.
-- Operações concorrentes de reserva/empréstimo são serializadas/transacionadas
-  onde necessário; nunca emprestar duas vezes o último exemplar.
-- Cache, respostas, mensagens e permissões não podem cruzar entre contas ou sessões.
-- Mudanças confirmadas pelo Servidor tornam-se a fonte oficial para todos os
-  clientes; o Cliente atualiza sua tela por resposta ou consulta posterior.
+- Uma única instância do Cliente, autenticada como ADMIN, pode manter sessão ativa
+  no Servidor; novas conexões são recusadas enquanto essa sessão estiver válida.
+- O Servidor define timeout, encerramento, limites de recursos e recuperação de
+  sessão após queda de conexão. Threads continuam sendo usadas para tarefas
+  internas sem abrir acesso a outras contas Cliente.
+- Operações concorrentes de reserva/empréstimo decorrentes de tarefas internas
+  são serializadas/transacionadas onde necessário; nunca emprestar duas vezes o
+  último exemplar.
+- Mudanças confirmadas pelo Servidor são a fonte oficial e aparecem na única
+  interface Cliente por resposta ou consulta posterior.
 
 ### 9.3 Estado já implementado a reaproveitar
 
@@ -537,8 +522,8 @@ Servidor; não recomeçar cada tela do zero. A execução atual dos testes deve 
 verificada antes de alegar aprovação.
 
 O código revisado anteriormente ainda não demonstrava uma camada Socket
-separada, contas USER/ADMIN completas, autenticação/autorização do lado do
-Servidor, filas/reservas persistentes, ou serviço de envio de e-mail completo.
+separada, autenticação/autorização ADMIN do lado do Servidor, sessão única,
+filas/reservas persistentes, ou serviço de envio de e-mail completo.
 Esses itens continuam como trabalho novo. A conexão MySQL deve sair do Cliente;
 qualquer credencial padrão embutida deve ser removida sem divulgar seu valor.
 
@@ -548,8 +533,8 @@ qualquer credencial padrão embutida deve ser removida sem divulgar seu valor.
   documentados: `Cliente.jar` e `Servidor.jar`.
 - Distribuir SQL/migrações, configuração de exemplo e manual como arquivos
   auxiliares; nunca incluir segredos reais.
-- Iniciar/configurar o Servidor e MySQL primeiro; depois abrir uma ou mais
-  instâncias Cliente com host e porta corretos.
+- Iniciar/configurar o Servidor e MySQL primeiro; depois abrir uma única
+  instância Cliente ADMIN com host e porta corretos.
 - Testar os JARs fora da IDE e em máquina limpa. Confirmar dependências permitidas
   e que o JAR do Cliente não carrega driver nem configuração de banco.
 - O projeto roda localmente ou em LAN; não depende de AWS.
@@ -564,14 +549,15 @@ obrigatórias. A prioridade organiza a sequência, não permite remover itens.
 
 - Confirmar versão dos fontes, dependências, esquema, módulos existentes e
   requisitos acadêmicos; executar e registrar os testes-base.
-- Registrar múltiplos clientes como requisito; definir quantidade simultânea
-  esperada, rede de implantação, responsável pelo Servidor e endereços/portas.
-- Aprovar matriz ADMIN/USER, estados de conta, bootstrap do primeiro ADMIN,
-  política de senha, empréstimo físico/digital, prazo, renovação, atraso,
-  suspensão, reserva/fila, turma/período e CSV.
-- Registrar a exigência acadêmica de guardar senha cifrada com AES-GCM; definir
-  provisionamento/rotação da chave do Servidor, o hash PBKDF2 usado no login e a
-  ressalva de segurança dessa cópia reversível.
+- Registrar uma única instância Cliente ADMIN e uma única conta ADMIN; definir
+  estação autorizada, rede de implantação, responsável pelo Servidor e
+  endereços/portas.
+- Aprovar o provisionamento da conta ADMIN, estado da conta, política de senha,
+  empréstimo físico/digital, cadastro de leitores sem login, prazo, renovação,
+  atraso, reserva/fila, turma/período e CSV.
+- Registrar que o banco guardará a senha cifrada com AES-256-GCM, sem hash
+  paralelo; definir provisionamento/rotação da chave do Servidor e documentar
+  que AES é cifragem reversível, não hash.
 - Definir idiomas obrigatórios, SMTP de teste, limites/timeouts para Google Books
   e Open Library e quais dados de capa serão guardados (URL/arquivo/BLOB).
 - Definir o que “offline” significa: fallback externo funciona se Servidor e
@@ -583,13 +569,17 @@ obrigatórias. A prioridade organiza a sequência, não permite remover itens.
 ### Fase 1 — Esqueleto Cliente-Servidor e dois JARs
 
 - Criar os pontos de entrada independentes e build do Cliente.jar e Servidor.jar.
-- Criar protocolo versionado, tamanho máximo, tipos de pedido/resposta, códigos
-  de erro, timeouts e controle de conexão.
-- Criar servidor Socket concorrente com limites de recurso, estado de saúde,
-  logs sem segredo e encerramento controlado.
+- Configurar IP (`ADDRESS`) e porta (`PORT`) do Servidor no Cliente; trocar
+  mensagens simples por TCP/IP usando `Socket`/`ServerSocket`, sem protocolo
+  binário versionado ou pasta `network`. O Servidor deve vincular o
+  `ServerSocket` ao endereço configurado; `new ServerSocket(PORT)` sozinho
+  escuta em todas as interfaces disponíveis.
+- Criar servidor Socket que aceite uma única sessão Cliente ADMIN ativa, com
+  limites de recurso, estado de saúde, logs sem segredo e encerramento controlado.
 - Criar cliente Swing com configuração de host/porta e I/O fora da EDT.
-- **Aceite:** vários clientes conectam ao mesmo Servidor; desconectar um não
-  derruba os demais; erros de protocolo/timeout são tratados; sessões não se misturam.
+- **Aceite:** a única instância Cliente ADMIN conecta ao Servidor; uma segunda
+  sessão é recusada; desconexão permite reconexão segura; mensagens inválidas e
+  timeouts são tratados.
 
 ### Fase 2 — Persistência segura, contas e autorização
 
@@ -597,64 +587,66 @@ obrigatórias. A prioridade organiza a sequência, não permite remover itens.
   usar configuração local protegida.
 - Versionar migrações e preservar os dados existentes, inclusive tomadores
   antigos que hoje possam estar registrados por nome/contato.
-- Criar usuário, papel, estado de conta, verificação e sessão; autenticação,
-  logout, expiração, revogação, limite de tentativa e proteção do último ADMIN.
-- Armazenar hash salgado PBKDF2 para validação de login.
-- Em cumprimento à rubrica acadêmica, armazenar também cópia cifrada da senha
-  com AES-GCM; limitar decifragem ao Servidor, proteger a chave fora dos
-  artefatos, versionar o formato e prever rotação. Não persistir a chave junto
-  do ciphertext nem disponibilizar senha/ciphertext em telas ou respostas.
+- Criar/provisionar a única conta ADMIN, estado de conta e sessão; implementar
+  autenticação, logout, expiração, revogação e limite de tentativas. Não criar
+  cadastro público, papéis USER ou contas de acesso para leitores.
+- Armazenar a senha cifrada com AES-256-GCM para validação do login; não guardar
+  hash nem outra derivação em paralelo. Limitar cifra/decifra ao
+  Servidor, proteger a chave fora dos artefatos, versionar o formato e prever
+  rotação. Não persistir a chave junto do ciphertext nem disponibilizar
+  senha/ciphertext em telas ou respostas.
 - Registrar no README/documentação que armazenar senha reversivelmente é uma
   exceção acadêmica, não recomendação para uma implantação de produção.
-- Implementar validação de propriedade e autorização em cada operação, com
-  auditoria de ações sensíveis.
-- **Aceite:** testes negativos provam que USER não acessa terceiros nem executa
-  ação administrativa; alterar `role`/ID no pedido não eleva privilégio; o
-  Servidor grava hash PBKDF2 e ciphertext AES-GCM, rejeita adulteração do
-  ciphertext e mantém a chave fora dos JARs. O login valida o hash e a senha
-  nunca é exibida nem devolvida.
+- Implementar autorização ADMIN em cada operação e auditoria de ações sensíveis;
+  leitores são registros de negócio e nunca atores de sessão.
+- **Aceite:** somente a sessão ADMIN ativa executa operações; alterar `role`/ID
+  no pedido não cria outra identidade nem eleva privilégio; o Servidor grava
+  somente ciphertext AES-GCM, rejeita adulteração e mantém a chave fora dos
+  JARs. O login decifra e valida a senha somente no Servidor; a senha nunca é
+  exibida nem devolvida.
 
 ### Fase 3 — Catálogo e exemplares pelo Servidor
 
 - Migrar consultas e CRUD de livros, exemplares, gêneros, editoras, estantes e
   bibliotecas para serviços do Servidor.
 - Manter as telas Swing existentes quando possível; trocar JDBC direto por
-  chamadas ao protocolo.
+  mensagens Socket no formato combinado entre Cliente e Servidor.
 - Validar ISBN, duplicidade e disponibilidade; inativar logicamente registros
   com histórico; transacionar gravações relacionadas.
-- **Aceite:** Cliente não conecta ao MySQL; USER consulta o catálogo; ADMIN altera
-  catálogo; histórico permanece após inativação.
+- **Aceite:** Cliente não conecta ao MySQL; ADMIN consulta e altera catálogo;
+  histórico permanece após inativação.
 
 ### Fase 4 — Reservas, empréstimos, devolução e fila persistente
 
-- Integrar tomador com cadastro de leitor sem atribuir registros históricos
-  antigos a contas sem validação.
-- Implementar pedido USER, fila persistente, aprovação ADMIN, empréstimo,
-  devolução, renovação se aprovada e bloqueio por atraso conforme política.
+- Integrar tomador com cadastro de leitor sem criar contas de acesso nem atribuir
+  registros históricos antigos a pessoas sem validação.
+- Implementar cadastro administrativo de reservas/fila e registro ADMIN de
+  empréstimo, devolução, renovação se aprovada e bloqueio por atraso conforme
+  política; leitores não fazem pedidos pelo Cliente.
 - Implementar concorrência/atomicidade para o último exemplar e registrar
-  leitor beneficiado separado do operador ADMIN.
+  o leitor beneficiado separadamente do operador ADMIN.
 - **Aceite:** fila sobrevive a reinício; o último exemplar não gera empréstimo
-  duplicado; USER cancela apenas pedido próprio ainda pendente.
+  duplicado; apenas o ADMIN pode criar, alterar ou cancelar reservas.
 
-### Fase 5 — Perfil, listas, progresso e exportação
+### Fase 5 — Leitores, listas escolares e exportação
 
-- Implementar edição limitada de perfil, verificação após troca de e-mail e
-  preferências explícitas de recomendação.
-- Implementar listas pessoais privadas USER e listas escolares por turma/período
-  sob controle ADMIN, com rascunho/publicação.
-- Implementar progresso de leitura com definição aprovada, numerador/denominador,
-  percentual e estados vazios.
-- Implementar histórico e exportação CSV autorizados, UTF-8 e escaping correto.
-- **Aceite:** isolamento de listas/histórico entre usuários; progresso correto
-  para lista vazia/parcial/completa; CSV contém somente dados autorizados.
+- Implementar edição administrativa dos dados de contato dos leitores, sem
+  perfil de login, preferências privadas ou listas pessoais.
+- Implementar listas escolares por turma/período sob controle ADMIN, com
+  rascunho/publicação e notificações aos destinatários cadastrados.
+- Implementar histórico e exportação CSV disponíveis somente ao ADMIN, em UTF-8
+  e com escaping correto.
+- **Aceite:** não há dados de perfil/listas privadas por conta; listas escolares,
+  histórico e CSV são acessíveis somente pela sessão ADMIN.
 
 ### Fase 6 — E-mails e rotinas agendadas
 
-- Implementar verificação, aprovação de empréstimo, lembrete de vencimento,
-  cobrança conforme política e notificação de lista publicada.
+- Implementar confirmação de empréstimo/devolução, lembrete de vencimento,
+  cobrança conforme política e notificação de lista publicada; não implementar
+  verificação de cadastro de leitor.
 - Persistir estados/eventos e idempotência; retentativas não duplicam mensagem.
 - Configurar SMTP falso/local para testes e SMTP real fora do código.
-- **Aceite:** todas as cinco rotinas são testáveis sem envio real; falha de e-mail
+- **Aceite:** todas as rotinas de notificação são testáveis sem envio real; falha de e-mail
   não desfaz operação confirmada nem bloqueia o Servidor.
 
 ### Fase 7 — APIs, capas e resiliência
@@ -676,27 +668,29 @@ obrigatórias. A prioridade organiza a sequência, não permite remover itens.
 - Não deixar grupo como opcional por prioridade P1/P2; aproveitar somente as
   partes já implementadas e completar lacunas.
 - **Aceite:** checklist de cada um dos 13 grupos assinado com evidência de teste
-  visual/funcional nos idiomas e papéis incluídos.
+  visual/funcional nos idiomas para a única interface ADMIN.
 
 ### Fase 9 — Teste integrado e entrega acadêmica
 
-- Executar testes unitários, autorização, persistência, concorrência, sockets,
-  integrações simuladas, UI, instalação limpa e roteiro ponta a ponta.
+- Executar testes unitários, autorização ADMIN, persistência, concorrência
+  interna, sockets, integrações simuladas, UI, instalação limpa e roteiro ponta
+  a ponta.
 - Validar backup/restauração e aplicação de migração em cópia do banco.
-- Gerar versões finais de `Cliente.jar` e `Servidor.jar`; testar fora da IDE e
-  com múltiplos clientes no número definido na Fase 0.
+- Gerar versões finais de `Cliente.jar` e `Servidor.jar`; testar fora da IDE com
+  uma única instância Cliente ADMIN e rejeição de sessões concorrentes.
 - Entregar manual de instalação/execução, configuração de exemplo sem segredo,
   SQL/migrações e roteiro de demonstração.
-- **Aceite final:** dois JARs executam em ambiente limpo; vários clientes operam
-  simultaneamente; todas as melhorias obrigatórias têm evidência de conclusão;
-  cliente não acessa banco diretamente e nenhum segredo está nos artefatos.
+- **Aceite final:** os dois JARs executam em ambiente limpo; somente a instância
+  Cliente ADMIN autorizada opera; todas as melhorias obrigatórias têm evidência
+  de conclusão; Cliente não acessa o banco diretamente e nenhum segredo está nos
+  artefatos.
 
 ## 11. Critérios gerais de pronto
 
 Uma melhoria só é considerada concluída quando:
 
 - Regra de negócio e autorização são validadas no Servidor.
-- Contrato de protocolo e alteração de banco estão documentados e versionados.
+- Formato das mensagens Socket e alteração de banco estão documentados.
 - Dados históricos são preservados; migração/backup/recuperação foram testados.
 - Sucesso, vazio, falha, falta de permissão, timeout e cancelamento têm feedback
   explícito.
@@ -704,7 +698,7 @@ Uma melhoria só é considerada concluída quando:
 - Há teste automatizado e evidência do fluxo integrado correspondente.
 - Os textos aparecem nos bundles de todos os idiomas obrigatórios.
 - Não há senha, token ou credencial em código, JAR, log ou relatório.
-- Todos os requisitos da lista original foram implementados; não basta compilar
+- Todos os requisitos deste plano foram implementados; não basta compilar
   ou apresentar telas sem backend autorizado e persistência.
 
 ## 12. Referências
@@ -785,7 +779,8 @@ e condições de uso durante a implementação. Acesso às páginas: **27 out. 2
   autoridade para sobrescrever um cadastro confirmado e falha nunca impede
   entrada manual.
 - Oracle fundamenta concorrência Swing e Sockets; OWASP recomenda hash de senha
-  e autorização por requisição no Servidor. A rubrica acadêmica exige também a
-  cópia AES-GCM da senha no banco; por isso o sistema mantém hash PBKDF2 para
-  autenticação e restringe a cifragem reversível ao Servidor, documentando o risco.
+  e autorização por requisição no Servidor. Este projeto opta por cifrar a senha
+  com AES-GCM conforme requisito definido, sem hash paralelo; por ser
+  reversível, a decifragem fica restrita ao Servidor e o risco deve ser
+  documentado.
   NIST SP 800-38D e Java `GCMParameterSpec` fundamentam o uso de AES-GCM.
