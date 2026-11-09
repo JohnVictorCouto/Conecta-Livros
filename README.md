@@ -353,15 +353,3 @@ java -jar target\conecta-livros-1.0.0-Cliente.jar
 ```
 
 Execute `Schema.sql` somente para criar uma instalação nova. Esse script inclui as tabelas de conta ADMIN, auditoria e os indicadores de inativação lógica. Ele não migra nem modifica um banco que já exista.
-
-## Resumo da arquitetura
-
-O projeto é uma aplicação desktop Java Swing com persistência em MySQL, organizada em quatro blocos principais:
-
-- `model/`: entidades e regras de negócio
-- `dao/`: fachadas remotas no Cliente
-- `server/ServerDAO.java`: acesso ao MySQL/JDBC no Servidor
-- `util/`: infraestrutura, cache, tradução e integrações
-- `view/`: interface gráfica e navegação entre telas
-
-Esse padrão torna a aplicação simples de manter, facilita a extensão de novas telas e mantém o código de acesso ao banco separado da camada visual.
