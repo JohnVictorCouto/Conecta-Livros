@@ -92,6 +92,127 @@ Arquivos de recursos usados para internacionalização:
 
 Esses arquivos alimentam a classe `Tradutor`, que seleciona o idioma do sistema e troca os textos da interface dinamicamente.
 
+## Estrutura completa do repositório
+
+Abaixo está o inventário completo dos arquivos relevantes do projeto, incluindo pacotes de fonte, recursos e artefatos de build que normalmente ficam no repositório:
+
+### Arquivos de configuração e documentação
+
+- `.gitignore`: ignora arquivos locais e artefatos de build.
+- `LICENSE.txt`: licença do projeto.
+- `PLANO.md`: plano de implementação/execução do projeto.
+- `pom.xml`: build do Maven com dependências e empacotamento dos JARs do Cliente e Servidor.
+- `Schema.sql`: criação do banco e estrutura inicial da aplicação.
+- `config.properties`: configuração local do servidor (não deve ser enviado com segredos em produção).
+- `README.md`: documentação do projeto.
+
+### `dao/`
+
+- `CatalogoInativoDAO.java`: acesso às opções de catálogo inativas.
+- `EditoraDAO.java`: manutenção de editoras.
+- `EmprestimoDAO.java`: operações de empréstimo, devolução e consulta.
+- `EstanteDAO.java`: cadastro e busca de estantes.
+- `ExemplarDAO.java`: manutenção de exemplares.
+- `GeneroDAO.java`: manutenção de gêneros.
+- `ListaEscolarDAO.java`: listas escolares e associação com livros.
+- `LivroDAO.java`: CRUD de livros e filtros de consulta.
+
+### `model/`
+
+- `Editora.java`: entidade da editora.
+- `Emprestimo.java`: entidade de empréstimo.
+- `Estante.java`: entidade de estante.
+- `Exemplar.java`: entidade de exemplar físico.
+- `Genero.java`: entidade de gênero.
+- `ListaEscolar.java`: entidade de lista escolar.
+- `Livro.java`: entidade de livro.
+- `RegistroInativo.java`: registro de itens inativos ou desativados.
+
+### `server/`
+
+- `AdminAuthService.java`: serviço de autenticação administrativa.
+- `ClientSocket.java`: socket do cliente para comunicação com o servidor.
+- `CoverSyncService.java`: sincronização de capas de livros.
+- `EmailNotificationService.java`: envio de notificações por e-mail.
+- `EmailVerificationService.java`: verificação de e-mail no cadastro.
+- `Server.java`: ponto de entrada do processo servidor.
+- `ServerDAO.java`: acesso JDBC e regras de persistência do servidor.
+- `ServerRequestHandler.java`: processamento das requisições recebidas via socket.
+- `ServerSchemaReadiness.java`: validação do schema do banco antes de operar.
+
+### `util/`
+
+- `ConnectionFactory.java`: criação de conexões JDBC.
+- `CryptoAES.java`: cifra AES-GCM para senhas e dados sensíveis.
+- `DadosCache.java`: cache em memória dos dados mais usados.
+- `EmailAddressValidator.java`: validação de endereços de e-mail.
+- `GoogleBooksClient.java`: consulta a APIs externas de livro/ISBN.
+- `IsbnUtils.java`: validação e normalização de ISBN.
+- `RemoteClient.java`: cliente remoto para comunicação com o servidor.
+- `Tradutor.java`: loader de traduções e internacionalização.
+- `WireJson.java`: serialização e parsing de mensagens JSON do protocolo interno.
+
+### `view/`
+
+- `BuscaView.java`: tela de busca e filtros.
+- `CatalogoDialog.java`: diálogo de cadastro de catálogos.
+- `CatalogoInativoDialog.java`: manutenção de itens inativos.
+- `ComponenteUI.java`: componentes e estilos visuais personalizados.
+- `DashboardView.java`: painel de indicadores e dashboard.
+- `EmprestimoDialog.java`: cadastro e fechamento de empréstimos.
+- `EmprestimosView.java`: listagem e filtros de empréstimos.
+- `EstanteView.java`: gestão de estantes.
+- `ExemplarDialog.java`: gestão de exemplares físicos.
+- `ImagemCapa.java`: apresentação de capa do livro.
+- `ListaEscolarView.java`: gestão de listas escolares.
+- `LivroAcoes.java`: ações auxiliares de livro na interface.
+- `LivroFormDialog.java`: formulário de cadastro/edição de livro.
+- `LivroView.java`: visualização e listagem dos livros.
+- `MainFrame.java`: tela principal da aplicação desktop.
+- `UITheme.java`: tema visual da aplicação.
+
+### `tests/`
+
+- `CryptoAESTest.java`: testes do módulo de criptografia.
+- `EmailAddressValidatorTest.java`: testes de validação de e-mail.
+- `EmailNotificationServiceTest.java`: testes de notificações por e-mail.
+- `EmprestimoTest.java`: testes do modelo de empréstimo.
+- `EmprestimosCsvTest.java`: testes da exportação/CSV de empréstimos.
+- `EmprestimosEmailTest.java`: testes de e-mail para empréstimos.
+- `IsbnUtilsTest.java`: testes de ISBN.
+- `LivroTest.java`: testes do modelo de livro.
+- `MainFrameNavLinkTest.java`: testes de navegação principal da UI.
+- `ServerRequestHandlerTest.java`: testes de requisições do servidor.
+- `ServerSchemaReadinessTest.java`: testes de readiness/schema do banco.
+- `WireJsonTest.java`: testes do protocolo JSON interno.
+
+### `bundles/`
+
+- `messages_en_US.properties`
+- `messages_es_ES.properties`
+- `messages_fr_FR.properties`
+- `messages_ja_JP.properties`
+- `messages_pt_BR.properties`
+
+### `images/`
+
+- `Icon.png`
+- `icone.png`
+
+### `lib/`
+
+- `mysql-connector-j-8.4.0.jar`: driver JDBC do MySQL.
+
+### `target/`
+
+A pasta `target/` é gerada por compilação do Maven e contém JARs finais, classes compiladas e relatórios de teste. Não é fonte da aplicação, mas faz parte do ciclo de build:
+
+- `conecta-livros-1.0.0-Cliente.jar`
+- `conecta-livros-1.0.0-Servidor.jar`
+- `dependency/` com bibliotecas de runtime
+- `surefire-reports/` com relatórios de testes
+- `classes/` com bytecode compilado
+
 ## Modelo de dados e banco
 
 O banco é criado pelo script `Schema.sql` e possui as tabelas principais:
