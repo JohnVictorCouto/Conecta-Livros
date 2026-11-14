@@ -386,14 +386,15 @@ public class BuscaView extends JPanel {
             livro.getExemplaresDisponiveis(), livro.getExemplaresEmprestados());
         badgeStatus.setAlignmentX(RIGHT_ALIGNMENT);
 
-        JButton btnAcoes = new JButton(Tradutor.t("books.card_actions"));
-        btnAcoes.setFont(UITheme.fontSmallBold());
-        btnAcoes.setForeground(UITheme.ACCENT_TEXT);
-        btnAcoes.setBackground(UITheme.BG_WHITE);
-        btnAcoes.setFocusPainted(false);
-        btnAcoes.setBorder(new ComponenteUI.RoundedBorder(UITheme.ACCENT, 6));
-        btnAcoes.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnAcoes.setPreferredSize(new Dimension(132, 30));
+        JMenu menuAcoes = new JMenu(Tradutor.t("books.card_actions"));
+        menuAcoes.setFont(UITheme.fontSmallBold());
+        menuAcoes.setForeground(UITheme.ACCENT_TEXT);
+        menuAcoes.setBackground(UITheme.BG_WHITE);
+        menuAcoes.setOpaque(true);
+        menuAcoes.setFocusPainted(false);
+        menuAcoes.setBorder(new ComponenteUI.RoundedBorder(UITheme.ACCENT, 6));
+        menuAcoes.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        menuAcoes.setPreferredSize(new Dimension(132, 30));
 
         JMenuItem itemEditar = new JMenuItem(Tradutor.t("search.edit_book"));
         itemEditar.addActionListener(e -> {
@@ -416,27 +417,25 @@ public class BuscaView extends JPanel {
         itemExcluir.addActionListener(e ->
             LivroAcoes.excluir(this, livro, aoAlterarLivros));
 
-        JPopupMenu popupAcoes = new JPopupMenu();
-        popupAcoes.setBackground(UITheme.BG_WHITE);
-        popupAcoes.setBorder(BorderFactory.createCompoundBorder(
+        menuAcoes.getPopupMenu().setBackground(UITheme.BG_WHITE);
+        menuAcoes.getPopupMenu().setBorder(BorderFactory.createCompoundBorder(
             new ComponenteUI.RoundedBorder(UITheme.BORDER, 8),
             BorderFactory.createEmptyBorder(4, 4, 4, 4)));
-        popupAcoes.add(itemEditar);
-        popupAcoes.add(itemExemplares);
+        menuAcoes.add(itemEditar);
+        menuAcoes.add(itemExemplares);
         if (livro.getExemplaresDisponiveis() > 0) {
             JMenuItem itemEmprestar = new JMenuItem(Tradutor.t("action.loan"));
             itemEmprestar.addActionListener(e ->
                 LivroAcoes.registrarEmprestimo(this, livro.getId(),
                     () -> buscar(campoBusca.getText())));
-            popupAcoes.add(itemEmprestar);
+            menuAcoes.add(itemEmprestar);
         }
-        popupAcoes.addSeparator();
-        popupAcoes.add(itemExcluir);
-        btnAcoes.addActionListener(e -> popupAcoes.show(btnAcoes, 0, btnAcoes.getHeight()));
+        menuAcoes.addSeparator();
+        menuAcoes.add(itemExcluir);
 
         direita.add(badgeStatus);
         direita.add(Box.createRigidArea(new Dimension(0, 8)));
-        direita.add(btnAcoes);
+        direita.add(menuAcoes);
         direita.add(Box.createRigidArea(new Dimension(0, 4)));
 
         if (livro.getExemplaresEmprestados() > 0) {
