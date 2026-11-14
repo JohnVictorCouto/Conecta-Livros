@@ -174,7 +174,6 @@ Abaixo está o inventário completo dos arquivos relevantes do projeto, incluind
 ### `tests/`
 
 - `CryptoAESTest.java`: testes do módulo de criptografia.
-- `EmailAddressValidatorTest.java`: testes de validação de e-mail.
 - `EmailNotificationServiceTest.java`: testes de notificações por e-mail.
 - `EmprestimoTest.java`: testes do modelo de empréstimo.
 - `EmprestimosCsvTest.java`: testes da exportação/CSV de empréstimos.
@@ -183,7 +182,6 @@ Abaixo está o inventário completo dos arquivos relevantes do projeto, incluind
 - `LivroTest.java`: testes do modelo de livro.
 - `MainFrameNavLinkTest.java`: testes de navegação principal da UI.
 - `ServerRequestHandlerTest.java`: testes de requisições do servidor.
-- `ServerSchemaReadinessTest.java`: testes de readiness/schema do banco.
 - `WireJsonTest.java`: testes do protocolo JSON interno.
 
 ### `bundles/`
