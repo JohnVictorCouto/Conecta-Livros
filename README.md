@@ -99,12 +99,9 @@ Abaixo está o inventário completo dos arquivos relevantes do projeto, incluind
 ### Arquivos de configuração e documentação
 
 - `.gitignore`: ignora arquivos locais e artefatos de build.
-- `LICENSE.txt`: licença do projeto.
-- `PLANO.md`: plano de implementação/execução do projeto.
 - `pom.xml`: build do Maven com dependências e empacotamento dos JARs do Cliente e Servidor.
 - `Schema.sql`: criação do banco e estrutura inicial da aplicação.
 - `config.properties`: configuração local do servidor (não deve ser enviado com segredos em produção).
-- `README.md`: documentação do projeto.
 
 ### `dao/`
 
@@ -132,13 +129,11 @@ Abaixo está o inventário completo dos arquivos relevantes do projeto, incluind
 
 - `AdminAuthService.java`: serviço de autenticação administrativa.
 - `ClientSocket.java`: socket do cliente para comunicação com o servidor.
-- `CoverSyncService.java`: sincronização de capas de livros.
 - `EmailNotificationService.java`: envio de notificações por e-mail.
 - `EmailVerificationService.java`: verificação de e-mail no cadastro.
 - `Server.java`: ponto de entrada do processo servidor.
 - `ServerDAO.java`: acesso JDBC e regras de persistência do servidor.
 - `ServerRequestHandler.java`: processamento das requisições recebidas via socket.
-- `ServerSchemaReadiness.java`: validação do schema do banco antes de operar.
 
 ### `util/`
 
